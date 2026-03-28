@@ -1,3 +1,4 @@
+import "@/lib/firebase";
 import { ArrowUpRight, DollarSign, LineChart, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
