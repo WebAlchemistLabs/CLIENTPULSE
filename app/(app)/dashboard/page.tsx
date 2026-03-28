@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 import {
   collection,
   doc,
-  getDoc,
-  getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   where,
@@ -30,74 +29,109 @@ export default function DashboardPage() {
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [chartData, setChartData] = useState<DashboardChartData | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingOverview, setLoadingOverview] = useState(true);
+  const [loadingCharts, setLoadingCharts] = useState(true);
+  const [loadingActivity, setLoadingActivity] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadDashboardData() {
-      if (!appUser?.workspaceId) return;
+    if (!appUser?.workspaceId) {
+      setOverview(null);
+      setChartData(null);
+      setRecentActivity([]);
+      setLoadingOverview(false);
+      setLoadingCharts(false);
+      setLoadingActivity(false);
+      return;
+    }
 
-      setLoading(true);
-      setError("");
+    setError("");
 
-      try {
-        const dashboardOverviewRef = doc(
-          db,
-          "workspaces",
-          appUser.workspaceId,
-          "dashboard",
-          "overview"
-        );
+    const overviewRef = doc(
+      db,
+      "workspaces",
+      appUser.workspaceId,
+      "dashboard",
+      "overview"
+    );
 
-        const dashboardChartsRef = doc(
-          db,
-          "workspaces",
-          appUser.workspaceId,
-          "dashboard",
-          "charts"
-        );
+    const chartsRef = doc(
+      db,
+      "workspaces",
+      appUser.workspaceId,
+      "dashboard",
+      "charts"
+    );
 
-        const [overviewSnapshot, chartsSnapshot] = await Promise.all([
-          getDoc(dashboardOverviewRef),
-          getDoc(dashboardChartsRef),
-        ]);
+    const activityQuery = query(
+      collection(db, "activity"),
+      where("workspaceId", "==", appUser.workspaceId),
+      orderBy("createdAt", "desc"),
+      limit(4)
+    );
 
-        if (!overviewSnapshot.exists() || !chartsSnapshot.exists()) {
-          setError(
-            "No dashboard data found yet. Seed demo data from the admin area first."
-          );
+    const unsubscribeOverview = onSnapshot(
+      overviewRef,
+      (snapshot) => {
+        if (!snapshot.exists()) {
           setOverview(null);
-          setChartData(null);
-          setRecentActivity([]);
-          return;
+          setError("No dashboard data found yet. Seed demo data from the admin area first.");
+        } else {
+          setOverview(snapshot.data() as DashboardOverview);
         }
+        setLoadingOverview(false);
+      },
+      (err) => {
+        console.error(err);
+        setError("Failed to load dashboard overview.");
+        setLoadingOverview(false);
+      }
+    );
 
-        setOverview(overviewSnapshot.data() as DashboardOverview);
-        setChartData(chartsSnapshot.data() as DashboardChartData);
+    const unsubscribeCharts = onSnapshot(
+      chartsRef,
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          setChartData(null);
+          setError("No chart data found yet. Seed demo data from the admin area first.");
+        } else {
+          setChartData(snapshot.data() as DashboardChartData);
+        }
+        setLoadingCharts(false);
+      },
+      (err) => {
+        console.error(err);
+        setError("Failed to load dashboard charts.");
+        setLoadingCharts(false);
+      }
+    );
 
-        const activityQuery = query(
-          collection(db, "activity"),
-          where("workspaceId", "==", appUser.workspaceId),
-          orderBy("createdAt", "desc"),
-          limit(4)
-        );
-
-        const activitySnapshot = await getDocs(activityQuery);
-        const activityData = activitySnapshot.docs.map((docItem) => {
+    const unsubscribeActivity = onSnapshot(
+      activityQuery,
+      async (snapshot) => {
+        const activityData = snapshot.docs.map((docItem) => {
           return docItem.data() as ActivityRecord;
         });
 
         setRecentActivity(activityData);
-      } catch (err) {
+        setLoadingActivity(false);
+      },
+      (err) => {
         console.error(err);
-        setError("Failed to load dashboard data.");
-      } finally {
-        setLoading(false);
+        setError("Failed to load dashboard activity.");
+        setLoadingActivity(false);
       }
-    }
+    );
 
-    loadDashboardData();
+    return () => {
+      unsubscribeOverview();
+      unsubscribeCharts();
+      unsubscribeActivity();
+    };
   }, [appUser?.workspaceId]);
+
+  const loading = loadingOverview || loadingCharts || loadingActivity;
+  const hasCriticalMissingData = !loading && (!overview || !chartData);
 
   return (
     <div className="space-y-8">
@@ -109,7 +143,7 @@ export default function DashboardPage() {
 
       {loading ? (
         <PageSkeleton cards={4} layout="grid" />
-      ) : error ? (
+      ) : error && hasCriticalMissingData ? (
         <ErrorState
           title="Dashboard Unavailable"
           description={error}

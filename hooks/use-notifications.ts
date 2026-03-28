@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { NotificationRecord } from "@/types/notification";
@@ -12,18 +12,22 @@ export function useNotifications() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadNotifications() {
-      if (!appUser?.workspaceId) return;
+    if (!appUser?.workspaceId) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
 
-      setLoading(true);
+    setLoading(true);
 
-      try {
-        const notificationsQuery = query(
-          collection(db, "notifications"),
-          where("workspaceId", "==", appUser.workspaceId)
-        );
+    const notificationsQuery = query(
+      collection(db, "notifications"),
+      where("workspaceId", "==", appUser.workspaceId)
+    );
 
-        const snapshot = await getDocs(notificationsQuery);
+    const unsubscribe = onSnapshot(
+      notificationsQuery,
+      (snapshot) => {
         const results = snapshot.docs.map((docItem) => {
           return docItem.data() as NotificationRecord;
         });
@@ -35,15 +39,16 @@ export function useNotifications() {
         });
 
         setNotifications(results);
-      } catch (error) {
+        setLoading(false);
+      },
+      (error) => {
         console.error("Failed to load notifications:", error);
         setNotifications([]);
-      } finally {
         setLoading(false);
       }
-    }
+    );
 
-    loadNotifications();
+    return () => unsubscribe();
   }, [appUser?.workspaceId]);
 
   const unreadCount = notifications.filter((item) => !item.read).length;

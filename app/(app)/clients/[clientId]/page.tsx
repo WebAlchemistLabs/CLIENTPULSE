@@ -1,15 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { doc, getDoc, getDocs, collection, query, where, orderBy, limit } from "firebase/firestore";
+import { use, useEffect, useState } from "react";
+import {
+  collection,
+  doc,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
 import { ArrowUpRight, BarChart3, DollarSign, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ClientStatusBadge } from "@/components/clients/client-status-badge";
 import { ClientPerformanceChart } from "@/components/clients/client-performance-chart";
 import { ClientReportsList } from "@/components/clients/client-reports-list";
 import { ClientActivityList } from "@/components/clients/client-activity-list";
-import { ErrorState } from "@/components/shared/error-state";
-import { PageSkeleton } from "@/components/shared/page-skeleton";
 import {
   Card,
   CardContent,
@@ -30,7 +36,8 @@ interface ClientDetailPageProps {
 }
 
 export default function ClientDetailPage({ params }: ClientDetailPageProps) {
-  const [clientId, setClientId] = useState("");
+  const { clientId } = use(params);
+
   const [client, setClient] = useState<ClientRecord | null>(null);
   const [detailData, setDetailData] = useState<ClientDetailSeedRecord | null>(null);
   const [reports, setReports] = useState<ReportRecord[]>([]);
@@ -39,86 +46,136 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function unwrapParams() {
-      const resolved = await params;
-      setClientId(resolved.clientId);
-    }
+    if (!clientId) return;
 
-    unwrapParams();
-  }, [params]);
+    setLoading(true);
+    setError("");
 
-  useEffect(() => {
-    async function loadClientDetail() {
-      if (!clientId) return;
+    let readyCount = 0;
 
-      setLoading(true);
-      setError("");
+    const markReady = () => {
+      readyCount += 1;
+      if (readyCount >= 4) {
+        setLoading(false);
+      }
+    };
 
-      try {
-        const clientRef = doc(db, "clients", clientId);
-        const detailRef = doc(db, "clientDetails", clientId);
+    const clientRef = doc(db, "clients", clientId);
+    const detailRef = doc(db, "clientDetails", clientId);
 
-        const [clientSnapshot, detailSnapshot] = await Promise.all([
-          getDoc(clientRef),
-          getDoc(detailRef),
-        ]);
+    const reportsQuery = query(
+      collection(db, "reports"),
+      where("clientId", "==", clientId)
+    );
 
-        if (!clientSnapshot.exists()) {
-          setError("Client not found.");
+    const activityQuery = query(
+      collection(db, "activity"),
+      where("clientId", "==", clientId),
+      orderBy("createdAt", "desc"),
+      limit(4)
+    );
+
+    const unsubscribeClient = onSnapshot(
+      clientRef,
+      (snapshot) => {
+        if (!snapshot.exists()) {
           setClient(null);
-          setDetailData(null);
-          setReports([]);
-          setActivity([]);
+          setError("Client not found.");
+          markReady();
           return;
         }
 
-        setClient(clientSnapshot.data() as ClientRecord);
-        setDetailData(
-          detailSnapshot.exists()
-            ? (detailSnapshot.data() as ClientDetailSeedRecord)
-            : null
-        );
-
-        const reportsQuery = query(
-          collection(db, "reports"),
-          where("clientId", "==", clientId)
-        );
-
-        const activityQuery = query(
-          collection(db, "activity"),
-          where("clientId", "==", clientId),
-          orderBy("createdAt", "desc"),
-          limit(4)
-        );
-
-        const [reportsSnapshot, activitySnapshot] = await Promise.all([
-          getDocs(reportsQuery),
-          getDocs(activityQuery),
-        ]);
-
-        setReports(reportsSnapshot.docs.map((docItem) => docItem.data() as ReportRecord));
-        setActivity(activitySnapshot.docs.map((docItem) => docItem.data() as ActivityRecord));
-      } catch (err) {
+        setClient(snapshot.data() as ClientRecord);
+        markReady();
+      },
+      (err) => {
         console.error(err);
         setError("Failed to load client details.");
-      } finally {
         setLoading(false);
       }
-    }
+    );
 
-    loadClientDetail();
+    const unsubscribeDetail = onSnapshot(
+      detailRef,
+      (snapshot) => {
+        setDetailData(
+          snapshot.exists()
+            ? (snapshot.data() as ClientDetailSeedRecord)
+            : null
+        );
+        markReady();
+      },
+      (err) => {
+        console.error(err);
+        setError("Failed to load client detail data.");
+        setLoading(false);
+      }
+    );
+
+    const unsubscribeReports = onSnapshot(
+      reportsQuery,
+      (snapshot) => {
+        setReports(
+          snapshot.docs.map((docItem) => docItem.data() as ReportRecord)
+        );
+        markReady();
+      },
+      (err) => {
+        console.error(err);
+        setError("Failed to load client reports.");
+        setLoading(false);
+      }
+    );
+
+    const unsubscribeActivity = onSnapshot(
+      activityQuery,
+      (snapshot) => {
+        setActivity(
+          snapshot.docs.map((docItem) => docItem.data() as ActivityRecord)
+        );
+        markReady();
+      },
+      (err) => {
+        console.error(err);
+        setError("Failed to load client activity.");
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      unsubscribeClient();
+      unsubscribeDetail();
+      unsubscribeReports();
+      unsubscribeActivity();
+    };
   }, [clientId]);
 
   if (loading) {
-    return <PageSkeleton cards={4} layout="grid" />;
+    return (
+      <div className="space-y-8">
+        <div className="h-10 w-56 rounded bg-white/5" />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index}>
+              <CardHeader>
+                <div className="h-4 w-24 rounded bg-white/5" />
+                <div className="mt-3 h-8 w-28 rounded bg-white/5" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (error || !client) {
     return (
-      <ErrorState
-        title="Client Detail Unavailable"
-        description={error || "Client not found."}
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Client Detail Unavailable</CardTitle>
+          <CardDescription>{error || "Client not found."}</CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 

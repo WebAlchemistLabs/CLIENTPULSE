@@ -1,21 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, onSnapshot, query, where, orderBy } from "firebase/firestore";
 import { Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ActivityTimelineItem } from "@/components/activity/activity-timeline-item";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { PageSkeleton } from "@/components/shared/page-skeleton";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { ActivityRecord } from "@/types/activity";
@@ -28,42 +22,59 @@ interface ActivityWithClientName extends ActivityRecord {
 export default function ActivityPage() {
   const { appUser } = useAuth();
   const [activity, setActivity] = useState<ActivityWithClientName[]>([]);
+  const [clientsMap, setClientsMap] = useState<Map<string, string>>(new Map());
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadActivity() {
+    async function loadClientsMap() {
       if (!appUser?.workspaceId) return;
 
-      setLoading(true);
-      setError("");
-
       try {
-        const [activitySnapshot, clientsSnapshot] = await Promise.all([
-          getDocs(
-            query(
-              collection(db, "activity"),
-              where("workspaceId", "==", appUser.workspaceId),
-              orderBy("createdAt", "desc")
-            )
-          ),
-          getDocs(
-            query(
-              collection(db, "clients"),
-              where("workspaceId", "==", appUser.workspaceId)
-            )
-          ),
-        ]);
+        const clientsSnapshot = await getDocs(
+          query(
+            collection(db, "clients"),
+            where("workspaceId", "==", appUser.workspaceId)
+          )
+        );
 
-        const clientsMap = new Map<string, string>();
+        const nextMap = new Map<string, string>();
 
         clientsSnapshot.docs.forEach((docItem) => {
           const client = docItem.data() as ClientRecord;
-          clientsMap.set(client.id, client.name);
+          nextMap.set(client.id, client.name);
         });
 
-        const results = activitySnapshot.docs.map((docItem) => {
+        setClientsMap(nextMap);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadClientsMap();
+  }, [appUser?.workspaceId]);
+
+  useEffect(() => {
+    if (!appUser?.workspaceId) {
+      setActivity([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    const activityQuery = query(
+      collection(db, "activity"),
+      where("workspaceId", "==", appUser.workspaceId),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(
+      activityQuery,
+      (snapshot) => {
+        const results = snapshot.docs.map((docItem) => {
           const item = docItem.data() as ActivityRecord;
 
           return {
@@ -75,16 +86,17 @@ export default function ActivityPage() {
         });
 
         setActivity(results);
-      } catch (err) {
+        setLoading(false);
+      },
+      (err) => {
         console.error(err);
         setError("Failed to load activity.");
-      } finally {
         setLoading(false);
       }
-    }
+    );
 
-    loadActivity();
-  }, [appUser?.workspaceId]);
+    return () => unsubscribe();
+  }, [appUser?.workspaceId, clientsMap]);
 
   const filteredActivity = useMemo(() => {
     const term = search.trim().toLowerCase();
