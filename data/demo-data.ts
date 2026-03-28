@@ -3,6 +3,7 @@ import { ClientRecord } from "@/types/client";
 import { DashboardOverview } from "@/types/dashboard";
 import { NotificationRecord } from "@/types/notification";
 import { ReportRecord } from "@/types/report";
+import { DashboardChartData } from "@/types/chart";
 
 export const DEMO_WORKSPACE_ID = "northstar-media";
 
@@ -36,6 +37,57 @@ export const demoDashboardOverview: DashboardOverview = {
       change: "+5.6%",
       changeType: "positive",
       icon: "growth",
+    },
+  ],
+};
+
+export const demoDashboardCharts: DashboardChartData = {
+  workspaceId: DEMO_WORKSPACE_ID,
+  performanceSeries: [
+    { label: "Mon", revenue: 6200, leads: 140, conversions: 8 },
+    { label: "Tue", revenue: 7100, leads: 168, conversions: 10 },
+    { label: "Wed", revenue: 6950, leads: 155, conversions: 9 },
+    { label: "Thu", revenue: 8240, leads: 182, conversions: 13 },
+    { label: "Fri", revenue: 9010, leads: 194, conversions: 14 },
+    { label: "Sat", revenue: 7630, leads: 160, conversions: 10 },
+    { label: "Sun", revenue: 9110, leads: 201, conversions: 15 },
+  ],
+  clientHealth: [
+    {
+      id: "northstar-dental",
+      name: "Northstar Dental",
+      status: "healthy",
+      healthScore: 89,
+      revenue: 12800,
+      growthPercent: 9.4,
+      logoText: "ND",
+    },
+    {
+      id: "luma-fitness",
+      name: "Luma Fitness",
+      status: "attention",
+      healthScore: 67,
+      revenue: 9400,
+      growthPercent: 2.3,
+      logoText: "LF",
+    },
+    {
+      id: "haven-legal",
+      name: "Haven Legal Group",
+      status: "healthy",
+      healthScore: 91,
+      revenue: 14350,
+      growthPercent: 11.8,
+      logoText: "HL",
+    },
+    {
+      id: "alto-homes",
+      name: "Alto Homes",
+      status: "critical",
+      healthScore: 48,
+      revenue: 5690,
+      growthPercent: -3.2,
+      logoText: "AH",
     },
   ],
 };

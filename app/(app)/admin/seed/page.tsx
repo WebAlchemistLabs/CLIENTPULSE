@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase";
 import {
   demoActivity,
   demoClients,
+  demoDashboardCharts,
   demoDashboardOverview,
   demoNotifications,
   demoReports,
@@ -32,6 +33,11 @@ export default function SeedPage() {
       await setDoc(
         doc(db, "workspaces", demoDashboardOverview.workspaceId, "dashboard", "overview"),
         demoDashboardOverview
+      );
+
+      await setDoc(
+        doc(db, "workspaces", demoDashboardCharts.workspaceId, "dashboard", "charts"),
+        demoDashboardCharts
       );
 
       for (const client of demoClients) {
@@ -70,7 +76,7 @@ export default function SeedPage() {
         <CardHeader>
           <CardTitle>Development Seeding</CardTitle>
           <CardDescription>
-            This will create demo dashboard, client, report, activity, and notification records.
+            This will create demo dashboard, chart, client, report, activity, and notification records.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

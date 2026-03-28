@@ -1,58 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { doc, getDoc, collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 import {
-  ArrowUpRight,
-  DollarSign,
-  LineChart,
-  TrendingDown,
-  Users,
-} from "lucide-react";
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
 import { PageHeader } from "@/components/layout/page-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ClientHealthList } from "@/components/dashboard/client-health-list";
+import { ChartCard } from "@/components/dashboard/chart-card";
+import { KpiCard } from "@/components/dashboard/kpi-card";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
-import { DashboardMetric, DashboardOverview } from "@/types/dashboard";
+import { DashboardOverview } from "@/types/dashboard";
 import { ActivityRecord } from "@/types/activity";
-
-function getMetricIcon(icon: DashboardMetric["icon"]) {
-  switch (icon) {
-    case "revenue":
-      return DollarSign;
-    case "leads":
-      return Users;
-    case "conversion":
-      return ArrowUpRight;
-    case "growth":
-      return LineChart;
-    default:
-      return LineChart;
-  }
-}
-
-function getBadgeVariant(changeType: DashboardMetric["changeType"]) {
-  switch (changeType) {
-    case "positive":
-      return "success";
-    case "negative":
-      return "danger";
-    default:
-      return "secondary";
-  }
-}
+import { DashboardChartData } from "@/types/chart";
 
 export default function DashboardPage() {
   const { appUser } = useAuth();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
+  const [chartData, setChartData] = useState<DashboardChartData | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -65,7 +39,7 @@ export default function DashboardPage() {
       setError("");
 
       try {
-        const dashboardRef = doc(
+        const dashboardOverviewRef = doc(
           db,
           "workspaces",
           appUser.workspaceId,
@@ -73,18 +47,31 @@ export default function DashboardPage() {
           "overview"
         );
 
-        const dashboardSnapshot = await getDoc(dashboardRef);
+        const dashboardChartsRef = doc(
+          db,
+          "workspaces",
+          appUser.workspaceId,
+          "dashboard",
+          "charts"
+        );
 
-        if (!dashboardSnapshot.exists()) {
+        const [overviewSnapshot, chartsSnapshot] = await Promise.all([
+          getDoc(dashboardOverviewRef),
+          getDoc(dashboardChartsRef),
+        ]);
+
+        if (!overviewSnapshot.exists() || !chartsSnapshot.exists()) {
           setError(
             "No dashboard data found yet. Seed demo data from the admin area first."
           );
           setOverview(null);
+          setChartData(null);
           setRecentActivity([]);
           return;
         }
 
-        setOverview(dashboardSnapshot.data() as DashboardOverview);
+        setOverview(overviewSnapshot.data() as DashboardOverview);
+        setChartData(chartsSnapshot.data() as DashboardChartData);
 
         const activityQuery = query(
           collection(db, "activity"),
@@ -126,9 +113,6 @@ export default function DashboardPage() {
                 <div className="h-4 w-24 rounded bg-white/5" />
                 <div className="mt-3 h-8 w-32 rounded bg-white/5" />
               </CardHeader>
-              <CardContent>
-                <div className="h-6 w-20 rounded bg-white/5" />
-              </CardContent>
             </Card>
           ))}
         </div>
@@ -142,61 +126,25 @@ export default function DashboardPage() {
       ) : (
         <>
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {overview?.metrics.map((metric) => {
-              const Icon = getMetricIcon(metric.icon);
-
-              return (
-                <Card key={metric.title} className="border-white/10 bg-card/80">
-                  <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-                    <div>
-                      <CardDescription>{metric.title}</CardDescription>
-                      <CardTitle className="mt-2 text-2xl">
-                        {metric.value}
-                      </CardTitle>
-                    </div>
-
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                  </CardHeader>
-
-                  <CardContent>
-                    <Badge variant={getBadgeVariant(metric.changeType)}>
-                      {metric.changeType === "negative" ? (
-                        <TrendingDown className="mr-1 h-3.5 w-3.5" />
-                      ) : null}
-                      {metric.change}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {overview?.metrics.map((metric) => (
+              <KpiCard key={metric.title} metric={metric} />
+            ))}
           </section>
 
           <section className="grid gap-4 xl:grid-cols-3">
-            <Card className="xl:col-span-2">
-              <CardHeader>
-                <CardTitle>Performance Overview</CardTitle>
-                <CardDescription>
-                  This section will later hold the main performance chart and date
-                  range filtering controls.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex h-[320px] items-center justify-center rounded-2xl border border-dashed border-border bg-background/40 text-sm text-muted-foreground">
-                  Chart area placeholder
-                </div>
-              </CardContent>
-            </Card>
+            <ChartCard data={chartData?.performanceSeries ?? []} />
+            <ClientHealthList items={chartData?.clientHealth ?? []} />
+          </section>
 
-            <Card>
+          <section className="grid gap-4 xl:grid-cols-3">
+            <Card className="xl:col-span-3">
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
                 <CardDescription>
                   Important updates across clients and reporting workflows.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <div className="grid gap-3 px-6 pb-6 md:grid-cols-2 xl:grid-cols-4">
                 {recentActivity.length === 0 ? (
                   <div className="rounded-xl border border-border bg-background/50 p-3 text-sm text-muted-foreground">
                     No recent activity found.
@@ -205,18 +153,18 @@ export default function DashboardPage() {
                   recentActivity.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-xl border border-border bg-background/50 p-3"
+                      className="rounded-xl border border-border bg-background/50 p-4"
                     >
                       <p className="text-sm font-medium text-foreground">
                         {item.title}
                       </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
+                      <p className="mt-2 text-sm text-muted-foreground">
                         {item.description}
                       </p>
                     </div>
                   ))
                 )}
-              </CardContent>
+              </div>
             </Card>
           </section>
         </>
