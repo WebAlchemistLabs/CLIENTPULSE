@@ -215,6 +215,59 @@ export const demoActivity: ActivityRecord[] = [
   },
 ];
 
+import { ClientDetailSeedRecord } from "@/types/client-detail";
+
+export const demoClientDetails: ClientDetailSeedRecord[] = [
+  {
+    clientId: "northstar-dental",
+    performanceSeries: [
+      { label: "Mon", revenue: 1600, leads: 34, conversions: 5 },
+      { label: "Tue", revenue: 1750, leads: 38, conversions: 6 },
+      { label: "Wed", revenue: 1820, leads: 36, conversions: 6 },
+      { label: "Thu", revenue: 1940, leads: 41, conversions: 7 },
+      { label: "Fri", revenue: 2100, leads: 44, conversions: 8 },
+      { label: "Sat", revenue: 1810, leads: 35, conversions: 5 },
+      { label: "Sun", revenue: 1780, leads: 33, conversions: 4 },
+    ],
+  },
+  {
+    clientId: "luma-fitness",
+    performanceSeries: [
+      { label: "Mon", revenue: 1200, leads: 28, conversions: 3 },
+      { label: "Tue", revenue: 1310, leads: 29, conversions: 4 },
+      { label: "Wed", revenue: 1260, leads: 26, conversions: 3 },
+      { label: "Thu", revenue: 1400, leads: 31, conversions: 4 },
+      { label: "Fri", revenue: 1510, leads: 34, conversions: 4 },
+      { label: "Sat", revenue: 1370, leads: 30, conversions: 3 },
+      { label: "Sun", revenue: 1350, leads: 29, conversions: 3 },
+    ],
+  },
+  {
+    clientId: "haven-legal",
+    performanceSeries: [
+      { label: "Mon", revenue: 1900, leads: 24, conversions: 5 },
+      { label: "Tue", revenue: 2050, leads: 26, conversions: 5 },
+      { label: "Wed", revenue: 1980, leads: 25, conversions: 4 },
+      { label: "Thu", revenue: 2140, leads: 28, conversions: 6 },
+      { label: "Fri", revenue: 2250, leads: 30, conversions: 6 },
+      { label: "Sat", revenue: 2010, leads: 26, conversions: 4 },
+      { label: "Sun", revenue: 2020, leads: 27, conversions: 4 },
+    ],
+  },
+  {
+    clientId: "alto-homes",
+    performanceSeries: [
+      { label: "Mon", revenue: 780, leads: 16, conversions: 2 },
+      { label: "Tue", revenue: 860, leads: 18, conversions: 2 },
+      { label: "Wed", revenue: 810, leads: 17, conversions: 2 },
+      { label: "Thu", revenue: 900, leads: 18, conversions: 2 },
+      { label: "Fri", revenue: 980, leads: 19, conversions: 3 },
+      { label: "Sat", revenue: 770, leads: 15, conversions: 1 },
+      { label: "Sun", revenue: 590, leads: 9, conversions: 0 },
+    ],
+  },
+];
+
 export const demoNotifications: NotificationRecord[] = [
   {
     id: "notification-1",

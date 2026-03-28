@@ -1,8 +1,13 @@
-import { doc, getDoc } from "firebase/firestore";
-import { notFound } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { doc, getDoc, getDocs, collection, query, where, orderBy, limit } from "firebase/firestore";
 import { ArrowUpRight, BarChart3, DollarSign, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ClientStatusBadge } from "@/components/clients/client-status-badge";
+import { ClientPerformanceChart } from "@/components/clients/client-performance-chart";
+import { ClientReportsList } from "@/components/clients/client-reports-list";
+import { ClientActivityList } from "@/components/clients/client-activity-list";
 import {
   Card,
   CardContent,
@@ -12,6 +17,9 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/lib/firebase";
 import { ClientRecord } from "@/types/client";
+import { ClientDetailSeedRecord } from "@/types/client-detail";
+import { ReportRecord } from "@/types/report";
+import { ActivityRecord } from "@/types/activity";
 
 interface ClientDetailPageProps {
   params: Promise<{
@@ -19,24 +27,113 @@ interface ClientDetailPageProps {
   }>;
 }
 
-async function getClient(clientId: string) {
-  const snapshot = await getDoc(doc(db, "clients", clientId));
+export default function ClientDetailPage({ params }: ClientDetailPageProps) {
+  const [clientId, setClientId] = useState("");
+  const [client, setClient] = useState<ClientRecord | null>(null);
+  const [detailData, setDetailData] = useState<ClientDetailSeedRecord | null>(null);
+  const [reports, setReports] = useState<ReportRecord[]>([]);
+  const [activity, setActivity] = useState<ActivityRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  if (!snapshot.exists()) {
-    return null;
+  useEffect(() => {
+    async function unwrapParams() {
+      const resolved = await params;
+      setClientId(resolved.clientId);
+    }
+
+    unwrapParams();
+  }, [params]);
+
+  useEffect(() => {
+    async function loadClientDetail() {
+      if (!clientId) return;
+
+      setLoading(true);
+      setError("");
+
+      try {
+        const clientRef = doc(db, "clients", clientId);
+        const detailRef = doc(db, "clientDetails", clientId);
+
+        const [clientSnapshot, detailSnapshot] = await Promise.all([
+          getDoc(clientRef),
+          getDoc(detailRef),
+        ]);
+
+        if (!clientSnapshot.exists()) {
+          setError("Client not found.");
+          setClient(null);
+          setDetailData(null);
+          setReports([]);
+          setActivity([]);
+          return;
+        }
+
+        setClient(clientSnapshot.data() as ClientRecord);
+        setDetailData(
+          detailSnapshot.exists()
+            ? (detailSnapshot.data() as ClientDetailSeedRecord)
+            : null
+        );
+
+        const reportsQuery = query(
+          collection(db, "reports"),
+          where("clientId", "==", clientId)
+        );
+
+        const activityQuery = query(
+          collection(db, "activity"),
+          where("clientId", "==", clientId),
+          orderBy("createdAt", "desc"),
+          limit(4)
+        );
+
+        const [reportsSnapshot, activitySnapshot] = await Promise.all([
+          getDocs(reportsQuery),
+          getDocs(activityQuery),
+        ]);
+
+        setReports(reportsSnapshot.docs.map((docItem) => docItem.data() as ReportRecord));
+        setActivity(activitySnapshot.docs.map((docItem) => docItem.data() as ActivityRecord));
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load client details.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadClientDetail();
+  }, [clientId]);
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="h-10 w-56 rounded bg-white/5" />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index}>
+              <CardHeader>
+                <div className="h-4 w-24 rounded bg-white/5" />
+                <div className="mt-3 h-8 w-28 rounded bg-white/5" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
   }
 
-  return snapshot.data() as ClientRecord;
-}
-
-export default async function ClientDetailPage({
-  params,
-}: ClientDetailPageProps) {
-  const { clientId } = await params;
-  const client = await getClient(clientId);
-
-  if (!client) {
-    notFound();
+  if (error || !client) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Client Detail Unavailable</CardTitle>
+          <CardDescription>{error || "Client not found."}</CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
   return (
@@ -102,11 +199,16 @@ export default async function ClientDetailPage({
       </section>
 
       <section className="grid gap-4 xl:grid-cols-3">
+        <ClientPerformanceChart data={detailData?.performanceSeries ?? []} />
+        <ClientReportsList reports={reports} />
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader>
             <CardTitle>Client Overview</CardTitle>
             <CardDescription>
-              This client detail experience will expand into charts, reports, notes, and timeline modules in future phases.
+              Structured account snapshot for this client workspace.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -144,29 +246,7 @@ export default async function ClientDetailPage({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Account Snapshot</CardTitle>
-            <CardDescription>
-              Quick summary of current account health.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="rounded-xl border border-border bg-background/50 p-3">
-              <p className="text-sm text-muted-foreground">Status</p>
-              <div className="mt-2">
-                <ClientStatusBadge status={client.status} />
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border bg-background/50 p-3">
-              <p className="text-sm text-muted-foreground">Logo Token</p>
-              <p className="mt-2 text-sm font-medium text-foreground">
-                {client.logoText}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <ClientActivityList activity={activity} />
       </section>
     </div>
   );

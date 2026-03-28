@@ -5,6 +5,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   demoActivity,
+  demoClientDetails,
   demoClients,
   demoDashboardCharts,
   demoDashboardOverview,
@@ -46,6 +47,13 @@ export default function SeedPage() {
 
       for (const report of demoReports) {
         await setDoc(doc(db, "reports", report.id), report);
+      }
+
+      for (const clientDetail of demoClientDetails) {
+        await setDoc(
+          doc(db, "clientDetails", clientDetail.clientId),
+          clientDetail
+        );
       }
 
       for (const activity of demoActivity) {
