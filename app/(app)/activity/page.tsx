@@ -5,6 +5,9 @@ import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ActivityTimelineItem } from "@/components/activity/activity-timeline-item";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ErrorState } from "@/components/shared/error-state";
+import { PageSkeleton } from "@/components/shared/page-skeleton";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -127,32 +130,17 @@ export default function ActivityPage() {
       </Card>
 
       {loading ? (
-        <div className="space-y-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="h-5 w-40 rounded bg-white/5" />
-                <div className="mt-2 h-4 w-64 rounded bg-white/5" />
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+        <PageSkeleton cards={4} layout="list" />
       ) : error ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Activity Unavailable</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-        </Card>
+        <ErrorState
+          title="Activity Unavailable"
+          description={error}
+        />
       ) : filteredActivity.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No Activity Found</CardTitle>
-            <CardDescription>
-              No activity matched your current search.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <EmptyState
+          title="No Activity Found"
+          description="No activity matched your current search."
+        />
       ) : (
         <section className="space-y-4">
           {filteredActivity.map((item, index) => (

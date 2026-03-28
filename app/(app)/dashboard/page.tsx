@@ -17,6 +17,8 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { ClientHealthList } from "@/components/dashboard/client-health-list";
 import { ChartCard } from "@/components/dashboard/chart-card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
+import { ErrorState } from "@/components/shared/error-state";
+import { PageSkeleton } from "@/components/shared/page-skeleton";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { DashboardOverview } from "@/types/dashboard";
@@ -106,23 +108,12 @@ export default function DashboardPage() {
       />
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="h-4 w-24 rounded bg-white/5" />
-                <div className="mt-3 h-8 w-32 rounded bg-white/5" />
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+        <PageSkeleton cards={4} layout="grid" />
       ) : error ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Dashboard Unavailable</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-        </Card>
+        <ErrorState
+          title="Dashboard Unavailable"
+          description={error}
+        />
       ) : (
         <>
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

@@ -6,6 +6,9 @@ import { Building2, Shield, Users } from "lucide-react";
 import { AdminClientRow } from "@/components/admin/admin-client-row";
 import { UserCard } from "@/components/admin/user-card";
 import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ErrorState } from "@/components/shared/error-state";
+import { PageSkeleton } from "@/components/shared/page-skeleton";
 import {
   Card,
   CardContent,
@@ -113,23 +116,12 @@ export default function AdminPage() {
       />
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="h-4 w-28 rounded bg-white/5" />
-                <div className="mt-3 h-8 w-24 rounded bg-white/5" />
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+        <PageSkeleton cards={3} layout="grid" />
       ) : error ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Admin Workspace Unavailable</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-        </Card>
+        <ErrorState
+          title="Admin Workspace Unavailable"
+          description={error}
+        />
       ) : (
         <>
           <section className="grid gap-4 md:grid-cols-3">
@@ -167,9 +159,10 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent>
                 {users.length === 0 ? (
-                  <div className="rounded-xl border border-border bg-background/50 p-4 text-sm text-muted-foreground">
-                    No users found in this workspace.
-                  </div>
+                  <EmptyState
+                    title="No Users Found"
+                    description="No users were found in this workspace."
+                  />
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2">
                     {users.map((userItem) => (
@@ -222,9 +215,10 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent>
                 {clients.length === 0 ? (
-                  <div className="rounded-xl border border-border bg-background/50 p-4 text-sm text-muted-foreground">
-                    No client records found in this workspace.
-                  </div>
+                  <EmptyState
+                    title="No Client Records Found"
+                    description="No client records were found in this workspace."
+                  />
                 ) : (
                   <div className="space-y-3">
                     {clients.map((client) => (

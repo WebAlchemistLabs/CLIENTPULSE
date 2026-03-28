@@ -5,6 +5,9 @@ import { doc, updateDoc } from "firebase/firestore";
 import { Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { NotificationItem } from "@/components/notifications/notification-item";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ErrorState } from "@/components/shared/error-state";
+import { PageSkeleton } from "@/components/shared/page-skeleton";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -112,34 +115,19 @@ export default function NotificationsPage() {
       </Card>
 
       {error ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Notification Update Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-        </Card>
+        <ErrorState
+          title="Notification Update Error"
+          description={error}
+        />
       ) : null}
 
       {loading ? (
-        <div className="space-y-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="h-5 w-40 rounded bg-white/5" />
-                <div className="mt-2 h-4 w-64 rounded bg-white/5" />
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+        <PageSkeleton cards={4} layout="list" />
       ) : filteredNotifications.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No Notifications Found</CardTitle>
-            <CardDescription>
-              No notifications matched your current search or filter.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <EmptyState
+          title="No Notifications Found"
+          description="No notifications matched your current search or filter."
+        />
       ) : (
         <section className="space-y-4">
           {filteredNotifications.map((notification) => (

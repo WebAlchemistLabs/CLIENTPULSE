@@ -8,6 +8,8 @@ import { ClientStatusBadge } from "@/components/clients/client-status-badge";
 import { ClientPerformanceChart } from "@/components/clients/client-performance-chart";
 import { ClientReportsList } from "@/components/clients/client-reports-list";
 import { ClientActivityList } from "@/components/clients/client-activity-list";
+import { ErrorState } from "@/components/shared/error-state";
+import { PageSkeleton } from "@/components/shared/page-skeleton";
 import {
   Card,
   CardContent,
@@ -108,31 +110,15 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
   }, [clientId]);
 
   if (loading) {
-    return (
-      <div className="space-y-8">
-        <div className="h-10 w-56 rounded bg-white/5" />
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="h-4 w-24 rounded bg-white/5" />
-                <div className="mt-3 h-8 w-28 rounded bg-white/5" />
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
+    return <PageSkeleton cards={4} layout="grid" />;
   }
 
   if (error || !client) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Client Detail Unavailable</CardTitle>
-          <CardDescription>{error || "Client not found."}</CardDescription>
-        </CardHeader>
-      </Card>
+      <ErrorState
+        title="Client Detail Unavailable"
+        description={error || "Client not found."}
+      />
     );
   }
 

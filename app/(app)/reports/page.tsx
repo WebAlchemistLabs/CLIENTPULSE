@@ -5,6 +5,9 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportCard } from "@/components/reports/report-card";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ErrorState } from "@/components/shared/error-state";
+import { PageSkeleton } from "@/components/shared/page-skeleton";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -167,35 +170,17 @@ export default function ReportsPage() {
       </Card>
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="h-5 w-40 rounded bg-white/5" />
-                <div className="mt-2 h-4 w-28 rounded bg-white/5" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-28 rounded bg-white/5" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <PageSkeleton cards={3} layout="grid" />
       ) : error ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Reports Unavailable</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-        </Card>
+        <ErrorState
+          title="Reports Unavailable"
+          description={error}
+        />
       ) : filteredReports.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No Reports Found</CardTitle>
-            <CardDescription>
-              No reports matched your current search or filter.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <EmptyState
+          title="No Reports Found"
+          description="No reports matched your current search or filter."
+        />
       ) : (
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredReports.map((report) => (
