@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useNotifications } from "@/hooks/use-notifications";
 
 export function Topbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, appUser } = useAuth();
   const { unreadCount } = useNotifications();
 
   async function handleLogout() {
@@ -29,12 +29,12 @@ export function Topbar() {
       .toUpperCase() || "CP";
 
   return (
-    <header className="sticky top-0 z-30 flex h-20 items-center border-b border-border bg-background/80 px-4 backdrop-blur-xl md:px-6">
+    <header className="sticky top-0 z-30 flex h-20 items-center border-b border-white/10 bg-background/70 px-4 backdrop-blur-xl md:px-6">
       <div className="flex w-full items-center justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="hidden min-w-[220px] items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 md:flex">
+          <div className="hidden min-w-[240px] items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2.5 md:flex">
             <span className="text-sm font-medium text-foreground">
-              Northstar Media
+              {appUser?.workspaceId ?? "Northstar Media"}
             </span>
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </div>
@@ -65,7 +65,7 @@ export function Topbar() {
             </Button>
           </Link>
 
-          <div className="hidden items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 sm:flex">
+          <div className="hidden items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 sm:flex">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
               {initials}
             </div>
@@ -74,7 +74,9 @@ export function Topbar() {
                 {user?.displayName || "ClientPulse User"}
               </p>
               <div className="mt-1">
-                <Badge variant="secondary">Authenticated</Badge>
+                <Badge variant="secondary">
+                  {appUser?.role ?? "authenticated"}
+                </Badge>
               </div>
             </div>
           </div>

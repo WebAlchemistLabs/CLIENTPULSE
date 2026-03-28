@@ -17,16 +17,19 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 border-b border-border pb-6 md:flex-row md:items-center md:justify-between",
+        "flex flex-col gap-4 pb-2 md:flex-row md:items-end md:justify-between",
         className
       )}
     >
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+      <div className="max-w-3xl">
+        <p className="mb-2 text-xs font-medium uppercase tracking-[0.25em] text-primary/80">
+          ClientPulse Workspace
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
           {title}
         </h1>
         {description ? (
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
             {description}
           </p>
         ) : null}
