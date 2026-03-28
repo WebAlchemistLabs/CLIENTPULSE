@@ -28,6 +28,7 @@ interface AuthContextValue {
   signup: (name: string, email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshAppUser: (userId?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -41,17 +42,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadAppUser(firebaseUser: User) {
-    const userRef = doc(db, "users", firebaseUser.uid);
+  async function loadAppUserById(userId: string, firebaseUser?: User | null) {
+    const userRef = doc(db, "users", userId);
     const snapshot = await getDoc(userRef);
 
     if (snapshot.exists()) {
       const data = snapshot.data();
 
       setAppUser({
-        id: firebaseUser.uid,
-        name: data.name ?? firebaseUser.displayName ?? "ClientPulse User",
-        email: data.email ?? firebaseUser.email ?? "",
+        id: userId,
+        name:
+          data.name ??
+          firebaseUser?.displayName ??
+          auth.currentUser?.displayName ??
+          "ClientPulse User",
+        email:
+          data.email ??
+          firebaseUser?.email ??
+          auth.currentUser?.email ??
+          "",
         role: (data.role as UserRole) ?? "viewer",
         workspaceId: data.workspaceId ?? "default-workspace",
         avatarUrl: data.avatarUrl ?? "",
@@ -61,13 +70,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  async function refreshAppUser(userId?: string) {
+    const targetUserId = userId ?? auth.currentUser?.uid;
+    if (!targetUserId) return;
+
+    await loadAppUserById(targetUserId, auth.currentUser);
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       setUser(firebaseUser);
 
       if (firebaseUser) {
-        await loadAppUser(firebaseUser);
+        await loadAppUserById(firebaseUser.uid, firebaseUser);
       } else {
         setAppUser(null);
       }
@@ -84,6 +100,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       appUser,
       role: appUser?.role ?? null,
       loading,
+      refreshAppUser,
       signup: async (name: string, email: string, password: string) => {
         const result = await createUserWithEmailAndPassword(
           auth,
@@ -108,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           createdAt: serverTimestamp(),
         });
 
-        await loadAppUser(result.user);
+        await loadAppUserById(result.user.uid, result.user);
       },
       login: async (email: string, password: string) => {
         await signInWithEmailAndPassword(auth, email, password);
