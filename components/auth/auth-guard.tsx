@@ -3,15 +3,17 @@
 import { ReactNode, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { isAdmin } from "@/lib/permissions";
 
 interface AuthGuardProps {
   children: ReactNode;
 }
 
 const publicRoutes = ["/login", "/signup"];
+const adminRoutes = ["/admin"];
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -19,6 +21,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
     if (loading) return;
 
     const isPublicRoute = publicRoutes.includes(pathname);
+    const isAdminRoute = adminRoutes.some((route) =>
+      pathname === route || pathname.startsWith(`${route}/`)
+    );
 
     if (!user && !isPublicRoute) {
       router.replace("/login");
@@ -27,8 +32,13 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
     if (user && isPublicRoute) {
       router.replace("/dashboard");
+      return;
     }
-  }, [user, loading, pathname, router]);
+
+    if (user && isAdminRoute && !isAdmin(role)) {
+      router.replace("/dashboard");
+    }
+  }, [user, role, loading, pathname, router]);
 
   if (loading) {
     return (
@@ -41,9 +51,13 @@ export function AuthGuard({ children }: AuthGuardProps) {
   }
 
   const isPublicRoute = publicRoutes.includes(pathname);
+  const isAdminRoute = adminRoutes.some((route) =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
 
   if (!user && !isPublicRoute) return null;
   if (user && isPublicRoute) return null;
+  if (user && isAdminRoute && !isAdmin(role)) return null;
 
   return <>{children}</>;
 }

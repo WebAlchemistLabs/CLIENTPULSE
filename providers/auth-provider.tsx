@@ -16,10 +16,14 @@ import {
   signInWithEmailAndPassword,
   updateProfile,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { AppUser, UserRole } from "@/types/auth";
 
 interface AuthContextValue {
   user: User | null;
+  appUser: AppUser | null;
+  role: UserRole | null;
   loading: boolean;
   signup: (name: string, email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
@@ -34,11 +38,40 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
+  const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  async function loadAppUser(firebaseUser: User) {
+    const userRef = doc(db, "users", firebaseUser.uid);
+    const snapshot = await getDoc(userRef);
+
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+
+      setAppUser({
+        id: firebaseUser.uid,
+        name: data.name ?? firebaseUser.displayName ?? "ClientPulse User",
+        email: data.email ?? firebaseUser.email ?? "",
+        role: (data.role as UserRole) ?? "viewer",
+        workspaceId: data.workspaceId ?? "default-workspace",
+        avatarUrl: data.avatarUrl ?? "",
+      });
+    } else {
+      setAppUser(null);
+    }
+  }
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
       setUser(firebaseUser);
+
+      if (firebaseUser) {
+        await loadAppUser(firebaseUser);
+      } else {
+        setAppUser(null);
+      }
+
       setLoading(false);
     });
 
@@ -48,6 +81,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      appUser,
+      role: appUser?.role ?? null,
       loading,
       signup: async (name: string, email: string, password: string) => {
         const result = await createUserWithEmailAndPassword(
@@ -56,11 +91,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
           password
         );
 
-        if (name.trim()) {
+        const cleanName = name.trim();
+
+        if (cleanName) {
           await updateProfile(result.user, {
-            displayName: name.trim(),
+            displayName: cleanName,
           });
         }
+
+        await setDoc(doc(db, "users", result.user.uid), {
+          name: cleanName || "ClientPulse User",
+          email,
+          role: "admin",
+          workspaceId: "northstar-media",
+          avatarUrl: "",
+          createdAt: serverTimestamp(),
+        });
+
+        await loadAppUser(result.user);
       },
       login: async (email: string, password: string) => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -69,7 +117,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await signOut(auth);
       },
     }),
-    [user, loading]
+    [user, appUser, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
