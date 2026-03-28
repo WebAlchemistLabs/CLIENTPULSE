@@ -47,4 +47,9 @@ export const adminNavItems = [
     href: "/admin",
     icon: Shield,
   },
+  {
+    title: "Seed Demo Data",
+    href: "/admin/seed",
+    icon: Shield,
+  },
 ];
