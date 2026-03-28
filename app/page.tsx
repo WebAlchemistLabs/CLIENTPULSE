@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowRight, BarChart3, Bell, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,9 +31,11 @@ export default function HomePage() {
           </p>
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-            <Button size="lg">
-              Enter App
-              <ArrowRight className="h-4 w-4" />
+            <Button asChild size="lg">
+              <Link href="/dashboard">
+                Enter App
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </Button>
 
             <Button variant="outline" size="lg">
