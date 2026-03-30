@@ -9,6 +9,10 @@ export const DEMO_WORKSPACE_ID = "northstar-media";
 
 export const demoDashboardOverview: DashboardOverview = {
   workspaceId: DEMO_WORKSPACE_ID,
+  totalRevenue: 0,
+  activeClients: 0,
+  activeProjects: 0,
+  conversionRate: 0,
   metrics: [
     {
       title: "Monthly Revenue",
